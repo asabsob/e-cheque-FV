@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import html2canvas from "html2canvas";
 
-// Arabic number-to-words with fils
+// Utility to convert numbers to Arabic words (supports JD + fils)
 const numberToArabicWords = (amount) => {
   const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
   const tens = ["", "عشرة", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
@@ -31,159 +31,172 @@ const numberToArabicWords = (amount) => {
 
   const jd = Math.floor(amount);
   const fils = Math.round((amount - jd) * 100);
+
   let result = toWords(jd) + " دينار";
-  if (fils > 0) result += " و " + toWords(fils) + " قرشاً";
+  if (fils > 0) {
+    result += " و " + toWords(fils) + " قرشاً";
+  }
   return result;
 };
 
-const statusColors = {
-  Pending: "bg-yellow-200 text-yellow-800",
-  Signed: "bg-blue-200 text-blue-800",
-  Presented: "bg-green-200 text-green-800",
-  Revoked: "bg-red-200 text-red-800",
-  Outdated: "bg-gray-300 text-gray-700",
-};
+function IssueChequeForm({ onSuccess }) {
+  const [formData, setFormData] = useState({
+    sender: "",
+    receiver: "",
+    amount: "",
+    cheque_date: "",
+    account_number: "",
+  });
 
-export default function App() {
-  const [cheques, setCheques] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [filter, setFilter] = useState("All");
-
-  const fetchCheques = () => {
-    setLoading(true);
-    fetch("https://echeque-api-production.up.railway.app/echeques/all", {
-      headers: {
-        "x_api_key": "bank-abc-key",
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => setCheques(data))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  useEffect(() => {
-    fetchCheques();
-  }, []);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const chequeData = {
+      ...formData,
+      id: Math.random().toString(36).substring(2, 10).toUpperCase(),
+      amount: parseFloat(formData.amount),
+    };
+    onSuccess(chequeData);
+  };
 
-  const filteredCheques =
-    filter === "All" ? cheques : cheques.filter((c) => c.status === filter);
+  return (
+    <form onSubmit={handleSubmit} className="mb-8 space-y-4 bg-white p-4 rounded shadow max-w-md">
+      <input name="sender" onChange={handleChange} placeholder="Sender" className="border p-2 w-full" required />
+      <input name="receiver" onChange={handleChange} placeholder="Receiver" className="border p-2 w-full" required />
+      <input name="amount" type="number" step="0.01" onChange={handleChange} placeholder="Amount" className="border p-2 w-full" required />
+      <input name="cheque_date" type="date" onChange={handleChange} className="border p-2 w-full" required />
+      <input name="account_number" onChange={handleChange} placeholder="Account Number" className="border p-2 w-full" required />
+      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded w-full">Issue Cheque</button>
+    </form>
+  );
+}
 
-  const downloadCheque = (chequeId) => {
-    const node = document.getElementById(`cheque-${chequeId}`);
+export default function App() {
+  const [cheque, setCheque] = useState(null);
+
+  const downloadCheque = () => {
+    const node = document.getElementById(`cheque-${cheque.id}`);
     html2canvas(node).then((canvas) => {
       const link = document.createElement("a");
-      link.download = `cheque-${chequeId}.png`;
+      link.download = `cheque-${cheque.id}.png`;
       link.href = canvas.toDataURL();
       link.click();
     });
   };
 
   return (
-    <div className="p-6 bg-slate-100 min-h-screen space-y-6">
-      <div className="flex flex-wrap gap-2">
-        {["All", "Pending", "Signed", "Presented", "Revoked", "Outdated"].map((f) => (
-          <button
-            key={f}
-            className={`px-3 py-1 rounded ${filter === f ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setFilter(f)}
-          >
-            {f}
+    <div className="p-8 min-h-screen bg-gray-100 font-sans">
+      <IssueChequeForm onSuccess={setCheque} />
+
+      {cheque && (
+        <>
+          <button onClick={downloadCheque} className="mb-4 bg-green-600 text-white px-4 py-2 rounded">
+            Download Cheque
           </button>
-        ))}
-      </div>
 
-      {loading ? (
-        <p className="text-center">Loading...</p>
-      ) : error ? (
-        <p className="text-center text-red-600">❌ Failed to load cheques.</p>
-      ) : filteredCheques.length === 0 ? (
-        <p className="text-center">No cheques found.</p>
-      ) : (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-1">
-          {filteredCheques.map((cheque) => {
-            const status =
-              new Date(cheque.expiry_date) < new Date() && cheque.status !== "Revoked"
-                ? "Outdated"
-                : cheque.status;
+          <div
+            id={`cheque-${cheque.id}`}
+            style={{
+              width: "790px",
+              height: "412px",
+              backgroundImage: 'url("/cheque-template.png")',
+              backgroundSize: "cover",
+              backgroundRepeat: "no-repeat",
+              position: "relative",
+              fontFamily: "monospace",
+            }}
+          >
+            {/* CHQ Number */}
+            <div style={{ position: "absolute", top: "25px", left: "600px", fontWeight: "bold", fontSize: "16px" }}>
+              CHQ #: {cheque.id}
+            </div>
 
-            const statusClass = statusColors[status] || "";
+            {/* Date */}
+            <div style={{ position: "absolute", top: "85px", left: "70px", fontWeight: "bold", fontSize: "16px" }}>
+              {cheque.cheque_date}
+            </div>
 
-            const jd = Math.floor(cheque.amount);
-            const fils = Math.round((cheque.amount - jd) * 100);
+            {/* Receiver */}
+            <div style={{ position: "absolute", top: "140px", left: "310px", fontWeight: "bold", fontSize: "18px" }}>
+              {cheque.receiver}
+            </div>
 
-            return (
-              <div
-                key={cheque.id}
-                id={`cheque-${cheque.id}`}
-                className="relative shadow-md border mx-auto"
-                style={{
-                  width: "790px",
-                  height: "412px",
-                  backgroundImage: 'url("/cheque-template.png")',
-                  backgroundSize: "100% 100%",
-                  backgroundRepeat: "no-repeat",
-                  fontFamily: "monospace",
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
-                <button
-                  onClick={() => downloadCheque(cheque.id)}
-                  className="absolute top-2 right-2 text-xs bg-blue-600 text-white px-2 py-1 rounded"
-                >
-                  Download
-                </button>
+            {/* Amount in words - Line 1 */}
+            <div style={{
+              position: "absolute",
+              top: "180px",
+              right: "300px",
+              fontSize: "16px",
+              fontWeight: "bold",
+              fontStyle: "italic",
+              direction: "rtl",
+              width: "600px",
+              textAlign: "right",
+            }}>
+              فقط  ({numberToArabicWords(cheque.amount)})
+            </div>
 
-                <div className="absolute top-[25px] left-[600px] text-[14px] font-bold">
-                  CHQ #: {cheque.id}
-                </div>
+            {/* Amount in words - Line 2 */}
+            <div style={{
+              position: "absolute",
+              top: "215px",
+              right: "300px",
+              fontSize: "14px",
+              fontWeight: "bold",
+              fontStyle: "italic",
+              direction: "rtl",
+              width: "600px",
+              textAlign: "right",
+            }}>
+              لا غير
+            </div>
 
-                <div className="absolute top-[85px] left-[70px] text-[16px] font-bold">
-                  {cheque.cheque_date}
-                </div>
+            {/* JD */}
+            <div style={{
+              position: "absolute",
+              top: "210px",
+              left: "630px",
+              fontSize: "18px",
+              fontWeight: "bold"
+            }}>
+              {Math.floor(cheque.amount)}
+            </div>
 
-                <div className="absolute top-[140px] left-[310px] text-[18px] font-bold">
-                  {cheque.receiver}
-                </div>
+            {/* Fils */}
+            <div style={{
+              position: "absolute",
+              top: "210px",
+              left: "725px",
+              fontSize: "18px",
+              fontWeight: "bold"
+            }}>
+              {(Math.round((cheque.amount - Math.floor(cheque.amount)) * 100)).toString().padStart(2, "0")}
+            </div>
 
-                <div className="absolute top-[180px] right-[70px] w-[600px] text-[16px] font-bold italic text-right direction-rtl">
-                  فقط {cheque.amount} ({numberToArabicWords(cheque.amount)})
-                </div>
-                <div className="absolute top-[205px] right-[70px] w-[600px] text-[16px] font-bold italic text-right direction-rtl">
-                  لا غير
-                </div>
+            {/* Signature space */}
+            <div style={{ position: "absolute", top: "330px", left: "180px", fontSize: "14px", fontWeight: "bold" }}>
+              {/* Signature */}
+            </div>
 
-                <div className="absolute top-[210px] left-[630px] text-[18px] font-bold">
-                  {jd}
-                </div>
-                <div className="absolute top-[210px] left-[705px] text-[18px] font-bold">
-                  {fils.toString().padStart(2, "0")}
-                </div>
+            {/* Bottom left: Cheque ID */}
+            <div style={{ position: "absolute", bottom: "20px", left: "80px", fontSize: "18px", fontWeight: "bold" }}>
+              {cheque.id}
+            </div>
 
-                <div className="absolute top-[330px] left-[180px] text-[14px] font-bold">
-                  {cheque.sender}
-                </div>
+            {/* Bottom center: Account number */}
+            <div style={{ position: "absolute", bottom: "20px", left: "300px", fontSize: "18px", fontWeight: "bold" }}>
+              {cheque.account_number}
+            </div>
 
-                <div className="absolute bottom-[20px] left-[80px] text-[18px] font-bold">
-                  {cheque.id}
-                </div>
-                <div className="absolute bottom-[20px] left-[300px] text-[18px] font-bold">
-                  {cheque.account_number}
-                </div>
-
-                <div className="absolute top-[270px] left-[640px]">
-                  <QRCodeCanvas value={JSON.stringify(cheque)} size={70} />
-                </div>
-
-                <div className={`absolute top-[15px] left-[30px] px-2 py-1 rounded-full text-xs font-bold ${statusClass}`}>
-                  {status}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+            {/* QR Code */}
+            <div style={{ position: "absolute", top: "270px", left: "640px" }}>
+              <QRCodeCanvas value={JSON.stringify(cheque)} size={70} />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
