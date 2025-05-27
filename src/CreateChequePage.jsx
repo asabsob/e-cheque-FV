@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import html2canvas from "html2canvas";
 import { QRCodeCanvas } from "qrcode.react";
+import { useNavigate } from "react-router-dom";
 
 // Arabic number-to-words conversion
 const numberToArabicWords = (amount) => {
@@ -68,9 +69,7 @@ const numberToArabicWords = (amount) => {
   return result;
 };
 
-const formatNumberWithCommas = (num) => {
-  return num.toLocaleString("en-US");
-};
+const formatNumberWithCommas = (num) => num.toLocaleString("en-US");
 
 function IssueChequeForm({ onSuccess }) {
   const [formData, setFormData] = useState({
@@ -109,6 +108,7 @@ function IssueChequeForm({ onSuccess }) {
 
 export default function CreateChequePage() {
   const [cheque, setCheque] = useState(null);
+  const navigate = useNavigate();
 
   const downloadCheque = () => {
     const node = document.getElementById(`cheque-${cheque.id}`);
@@ -126,9 +126,14 @@ export default function CreateChequePage() {
 
       {cheque && (
         <>
-          <button onClick={downloadCheque} className="mb-4 bg-green-600 text-white px-4 py-2 rounded">
-            Download Cheque
-          </button>
+          <div className="flex space-x-4 mb-4">
+            <button onClick={downloadCheque} className="bg-green-600 text-white px-4 py-2 rounded">
+              Download Cheque
+            </button>
+            <button onClick={() => navigate(`/sign/${cheque.id}`)} className="bg-yellow-500 text-white px-4 py-2 rounded">
+              Sign This Cheque
+            </button>
+          </div>
 
           <div
             id={`cheque-${cheque.id}`}
