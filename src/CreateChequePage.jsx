@@ -1,10 +1,8 @@
-// CreateChequePage.jsx
 import React, { useState } from "react";
 import html2canvas from "html2canvas";
 import { QRCodeCanvas } from "qrcode.react";
 import { useNavigate } from "react-router-dom";
 
-// Arabic number-to-words conversion
 const numberToArabicWords = (amount) => {
   const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
   const tens = ["", "عشرة", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
@@ -96,12 +94,12 @@ function IssueChequeForm({ onSuccess }) {
 
   return (
     <form onSubmit={handleSubmit} className="mb-8 space-y-4 bg-white p-4 rounded shadow max-w-md">
-      <input name="sender" onChange={handleChange} placeholder="Sender" className="border p-2 w-full" required />
-      <input name="receiver" onChange={handleChange} placeholder="Receiver" className="border p-2 w-full" required />
-      <input name="amount" type="number" step="0.01" onChange={handleChange} placeholder="Amount" className="border p-2 w-full" required />
+      <input name="sender" onChange={handleChange} placeholder="المرسل" className="border p-2 w-full" required />
+      <input name="receiver" onChange={handleChange} placeholder="المستفيد" className="border p-2 w-full" required />
+      <input name="amount" type="number" step="0.01" onChange={handleChange} placeholder="المبلغ بالدينار" className="border p-2 w-full" required />
       <input name="cheque_date" type="date" onChange={handleChange} className="border p-2 w-full" required />
-      <input name="account_number" onChange={handleChange} placeholder="Account Number" className="border p-2 w-full" required />
-      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded w-full">Issue Cheque</button>
+      <input name="account_number" onChange={handleChange} placeholder="رقم الحساب" className="border p-2 w-full" required />
+      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded w-full">إصدار الشيك</button>
     </form>
   );
 }
@@ -128,10 +126,10 @@ export default function CreateChequePage() {
         <>
           <div className="flex space-x-4 mb-4">
             <button onClick={downloadCheque} className="bg-green-600 text-white px-4 py-2 rounded">
-              Download Cheque
+              تحميل الشيك
             </button>
             <button onClick={() => navigate(`/sign/${cheque.id}`)} className="bg-yellow-500 text-white px-4 py-2 rounded">
-              Sign This Cheque
+              توقيع الشيك
             </button>
           </div>
 
@@ -189,32 +187,16 @@ export default function CreateChequePage() {
               لا غير
             </div>
 
-            <div style={{
-              position: "absolute",
-              top: "210px",
-              left: "580px",
-              fontSize: "18px",
-              fontWeight: "bold"
-            }}>
+            <div style={{ position: "absolute", top: "210px", left: "580px", fontSize: "18px", fontWeight: "bold" }}>
               {formatNumberWithCommas(Math.floor(cheque.amount))}
             </div>
 
-            <div style={{
-              position: "absolute",
-              top: "210px",
-              left: "730px",
-              fontSize: "18px",
-              fontWeight: "bold"
-            }}>
+            <div style={{ position: "absolute", top: "210px", left: "730px", fontSize: "18px", fontWeight: "bold" }}>
               {(Math.round((cheque.amount - Math.floor(cheque.amount)) * 100)).toString().padStart(2, "0")}
             </div>
 
             <div style={{ position: "absolute", top: "265px", left: "50px", fontSize: "14px", fontWeight: "bold" }}>
               {cheque.sender}
-            </div>
-
-            <div style={{ position: "absolute", top: "350px", left: "180px", fontSize: "14px", fontWeight: "bold" }}>
-              {/* Signature */}
             </div>
 
             <div style={{ position: "absolute", bottom: "20px", left: "80px", fontSize: "18px", fontWeight: "bold" }}>
