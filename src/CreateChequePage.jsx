@@ -105,8 +105,9 @@ function IssueChequeForm({ onSuccess }) {
 }
 
 export default function CreateChequePage() {
+ const navigate = useNavigate();
   const [cheque, setCheque] = useState(null);
-  const navigate = useNavigate();
+ 
 
   const downloadCheque = () => {
     const node = document.getElementById(`cheque-${cheque.id}`);
