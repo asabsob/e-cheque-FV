@@ -1,54 +1,68 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 export default function IssueChequeForm({ onSuccess }) {
   const [formData, setFormData] = useState({
     sender_account: "",
     receiver_account: "",
+    confirm_receiver_account: "",
     amount: "",
+    confirm_amount: "",
     cheque_date: "",
     expiry_date: "",
   });
 
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [receiverLocked, setReceiverLocked] = useState(false);
+  const [amountLocked, setAmountLocked] = useState(false);
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "receiver_account" && value.trim().length > 0) {
+      setReceiverLocked(true);
+    }
+
+    if (name === "amount" && value.trim().length > 0) {
+      setAmountLocked(true);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
+    setError("");
 
+    if (formData.receiver_account !== formData.confirm_receiver_account) {
+      setError("❌ اسم المستفيد غير متطابق.");
+      return;
+    }
+
+    if (formData.amount !== formData.confirm_amount) {
+      setError("❌ المبلغ غير متطابق.");
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const response = await fetch("https://echeque-api-production.up.railway.app/echeques/issue", {
+      const res = await fetch("https://echeque-api.vercel.app/echeques/issue", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x_api_key": "bank-abc-key",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sender_account: formData.sender_account,
+          receiver_account: formData.receiver_account,
+          amount: parseFloat(formData.amount),
+          cheque_date: formData.cheque_date,
+          expiry_date: formData.expiry_date,
+        }),
       });
 
-      const result = await response.json();
-      console.log("API response:", result);
-
-      if (response.ok) {
-        // Reset form
-        setFormData({
-          sender_account: "",
-          receiver_account: "",
-          amount: "",
-          cheque_date: "",
-          expiry_date: "",
-        });
-        onSuccess(); // Reload cheques
-      } else {
-        alert("❌ Failed to issue cheque. Please check your input.");
-      }
-
+      if (!res.ok) throw new Error("فشل في إصدار الشيك");
+      const data = await res.json();
+      onSuccess(data);
     } catch (err) {
-      console.error("Error during API call:", err);
-      alert("❌ Network error. Please try again later.");
+      setError("حدث خطأ أثناء إصدار الشيك");
     } finally {
       setSubmitting(false);
     }
@@ -57,85 +71,94 @@ export default function IssueChequeForm({ onSuccess }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white border border-gray-300 p-6 rounded-xl shadow max-w-4xl mx-auto space-y-6"
+      className="space-y-4 p-6 max-w-xl mx-auto bg-white shadow-lg rounded-lg border border-gray-100"
     >
-      <h2 className="text-xl font-bold text-center text-blue-700">🧾 Issue New Cheque</h2>
+      <h2 className="text-2xl font-bold text-center mb-4 text-blue-700">
+        🧾 إصدار شيك جديد
+      </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Sender Account</label>
-          <input
-            type="text"
-            name="sender_account"
-            value={formData.sender_account}
-            onChange={handleChange}
-            required
-            placeholder="e.g. 123456789"
-            className="w-full mt-1 px-3 py-2 border rounded"
-          />
-        </div>
+      <div className="grid grid-cols-1 gap-3">
+        <label className="font-medium text-gray-700">رقم حساب المُصدر</label>
+        <input
+          name="sender_account"
+          placeholder="رقم حساب المُصدر"
+          onChange={handleChange}
+          required
+          className="input"
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Receiver Account</label>
+        {!receiverLocked && (
           <input
-            type="text"
             name="receiver_account"
-            value={formData.receiver_account}
+            placeholder="اسم المستفيد"
             onChange={handleChange}
             required
-            placeholder="e.g. 987654321"
-            className="w-full mt-1 px-3 py-2 border rounded"
+            className="input"
           />
-        </div>
+        )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Amount (JOD)</label>
+        <input
+          name="confirm_receiver_account"
+          placeholder="تأكيد اسم المستفيد"
+          onChange={handleChange}
+          required
+          className="input"
+        />
+
+        {!amountLocked && (
           <input
             type="number"
             step="0.01"
             name="amount"
-            value={formData.amount}
+            placeholder="المبلغ (دينار)"
             onChange={handleChange}
             required
-            placeholder="e.g. 250.00"
-            className="w-full mt-1 px-3 py-2 border rounded"
+            className="input"
           />
-        </div>
+        )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Cheque Date</label>
-          <input
-            type="date"
-            name="cheque_date"
-            value={formData.cheque_date}
-            onChange={handleChange}
-            required
-            className="w-full mt-1 px-3 py-2 border rounded"
-          />
-        </div>
+        <input
+          type="number"
+          step="0.01"
+          name="confirm_amount"
+          placeholder="تأكيد المبلغ"
+          onChange={handleChange}
+          required
+          className="input"
+        />
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Expiry Date</label>
-          <input
-            type="date"
-            name="expiry_date"
-            value={formData.expiry_date}
-            onChange={handleChange}
-            required
-            className="w-full mt-1 px-3 py-2 border rounded"
-          />
-        </div>
+        <label className="font-medium text-gray-700">تاريخ الشيك</label>
+        <input
+          type="date"
+          name="cheque_date"
+          onChange={handleChange}
+          required
+          className="input"
+        />
+
+        <label className="font-medium text-gray-700">تاريخ الانتهاء</label>
+        <input
+          type="date"
+          name="expiry_date"
+          onChange={handleChange}
+          required
+          className="input"
+        />
       </div>
 
-      <div className="text-center">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
-        >
-          {submitting ? "Issuing..." : "Issue Cheque"}
-        </button>
-      </div>
+      {error && (
+        <div className="text-red-600 text-center font-semibold mt-2">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting}
+        className="btn w-full text-lg"
+      >
+        {submitting ? "⏳ يتم الإرسال..." : "✅ إصدار الشيك"}
+      </button>
     </form>
   );
 }

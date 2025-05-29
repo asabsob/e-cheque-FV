@@ -2,112 +2,68 @@ import React, { useState } from "react";
 import html2canvas from "html2canvas";
 import { QRCodeCanvas } from "qrcode.react";
 import { useNavigate } from "react-router-dom";
+import numberToArabicWords from "./utils/numberToArabicWords";
 
-const numberToArabicWords = (amount) => {
-  const ones = ["", "واحد", "اثنان", "ثلاثة", "أربعة", "خمسة", "ستة", "سبعة", "ثمانية", "تسعة"];
-  const tens = ["", "عشرة", "عشرون", "ثلاثون", "أربعون", "خمسون", "ستون", "سبعون", "ثمانون", "تسعون"];
-  const teens = ["عشرة", "أحد عشر", "اثنا عشر", "ثلاثة عشر", "أربعة عشر", "خمسة عشر", "ستة عشر", "سبعة عشر", "ثمانية عشر", "تسعة عشر"];
-  const hundreds = ["", "مائة", "مئتان", "ثلاثمائة", "أربعمائة", "خمسمائة", "ستمائة", "سبعمائة", "ثمانمائة", "تسعمائة"];
+export default function CreateChequePage() {
+  const [cheque, setCheque] = useState(null);
+  const [step, setStep] = useState(1);
+  const [receiverEntered, setReceiverEntered] = useState(false);
+  const [amountEntered, setAmountEntered] = useState(false);
 
-  const segmentToWords = (num) => {
-    const h = Math.floor(num / 100);
-    const rem = num % 100;
-    let words = [];
-
-    if (h > 0) words.push(hundreds[h]);
-
-    if (rem > 0) {
-      if (rem < 10) words.push(ones[rem]);
-      else if (rem < 20) words.push(teens[rem - 10]);
-      else {
-        const t = Math.floor(rem / 10);
-        const u = rem % 10;
-        if (u > 0) words.push(ones[u] + " و " + tens[t]);
-        else words.push(tens[t]);
-      }
-    }
-    return words.join(" و ");
-  };
-
-  const getUnitName = (n, singular, dual, plural) => {
-    if (n === 0) return "";
-    if (n === 1) return singular;
-    if (n === 2) return dual;
-    if (n >= 3 && n <= 10) return plural;
-    return plural;
-  };
-
-  const jd = Math.floor(amount);
-  const fils = Math.round((amount - jd) * 100);
-
-  const millions = Math.floor(jd / 1_000_000);
-  const thousands = Math.floor((jd % 1_000_000) / 1000);
-  const rest = jd % 1000;
-
-  let resultParts = [];
-
-  if (millions > 0) {
-    const words = segmentToWords(millions);
-    if (words) resultParts.push(words + " " + getUnitName(millions, "مليون", "مليونان", "ملايين"));
-  }
-
-  if (thousands > 0) {
-    const words = segmentToWords(thousands);
-    if (words) resultParts.push(words + " " + getUnitName(thousands, "ألف", "ألفان", "آلاف"));
-  }
-
-  if (rest > 0) {
-    resultParts.push(segmentToWords(rest));
-  }
-
-  let result = resultParts.join(" و ") + " دينار";
-  if (fils > 0) {
-    result += " و " + segmentToWords(fils) + " قرشاً";
-  }
-  return result;
-};
-
-const formatNumberWithCommas = (num) => num.toLocaleString("en-US");
-
-function IssueChequeForm({ onSuccess }) {
   const [formData, setFormData] = useState({
     sender: "",
     receiver: "",
+    confirm_receiver: "",
     amount: "",
+    confirm_amount: "",
     cheque_date: "",
     account_number: "",
   });
 
+  const navigate = useNavigate();
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "receiver" && value.trim().length >= 2) {
+      setReceiverEntered(true);
+    }
+
+    if (name === "amount" && parseFloat(value) >= 0.01) {
+      setAmountEntered(true);
+    }
+  };
+
+  const confirmStep = (e) => {
+    e.preventDefault();
+    if (formData.receiver !== formData.confirm_receiver) {
+      alert("❌ اسم المستفيد غير متطابق.");
+      return;
+    }
+    if (formData.amount !== formData.confirm_amount) {
+      alert("❌ المبلغ غير متطابق.");
+      return;
+    }
+    setStep(2);
+  };
+
+  const issueCheque = (e) => {
     e.preventDefault();
     const chequeData = {
-      ...formData,
       id: Math.random().toString(36).substring(2, 10).toUpperCase(),
+      sender: formData.sender,
+      receiver: formData.receiver,
       amount: parseFloat(formData.amount),
+      cheque_date: formData.cheque_date,
+      account_number: formData.account_number,
     };
-    onSuccess(chequeData);
+    setCheque(chequeData);
   };
-
-  return (
-    <form onSubmit={handleSubmit} className="mb-8 space-y-4 bg-white p-4 rounded shadow max-w-md">
-      <input name="sender" onChange={handleChange} placeholder="المرسل" className="border p-2 w-full" required />
-      <input name="receiver" onChange={handleChange} placeholder="المستفيد" className="border p-2 w-full" required />
-      <input name="amount" type="number" step="0.01" onChange={handleChange} placeholder="المبلغ بالدينار" className="border p-2 w-full" required />
-      <input name="cheque_date" type="date" onChange={handleChange} className="border p-2 w-full" required />
-      <input name="account_number" onChange={handleChange} placeholder="رقم الحساب" className="border p-2 w-full" required />
-      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded w-full">إصدار الشيك</button>
-    </form>
-  );
-}
-
-export default function CreateChequePage() {
- const navigate = useNavigate();
-  const [cheque, setCheque] = useState(null);
- 
 
   const downloadCheque = () => {
     const node = document.getElementById(`cheque-${cheque.id}`);
@@ -121,15 +77,103 @@ export default function CreateChequePage() {
 
   return (
     <div className="p-8 min-h-screen bg-gray-100 font-sans">
-      <IssueChequeForm onSuccess={setCheque} />
+      {!cheque && (
+        <form
+          onSubmit={step === 1 ? confirmStep : issueCheque}
+          className="mb-8 space-y-4 bg-white p-6 rounded shadow max-w-md mx-auto"
+        >
+          <h2 className="text-xl font-bold text-center">🧾 إصدار شيك جديد</h2>
+
+          {step === 1 && (
+            <>
+              {!receiverEntered && (
+                <input
+                  name="receiver"
+                  placeholder="اسم المستفيد"
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                  className="input"
+                />
+              )}
+              <input
+                name="confirm_receiver"
+                placeholder="تأكيد اسم المستفيد"
+                onChange={handleChange}
+                required
+                className="input"
+              />
+              {!amountEntered && (
+                <input
+                  type="number"
+                  step="0.01"
+                  name="amount"
+                  placeholder="المبلغ (دينار)"
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  required
+                  className="input"
+                />
+              )}
+              <input
+                type="number"
+                step="0.01"
+                name="confirm_amount"
+                placeholder="تأكيد المبلغ"
+                onChange={handleChange}
+                required
+                className="input"
+              />
+              <button type="submit" className="btn w-full">
+                تأكيد المعلومات
+              </button>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <input
+                name="sender"
+                placeholder="اسم المُصدر"
+                onChange={handleChange}
+                required
+                className="input"
+              />
+              <input
+                type="date"
+                name="cheque_date"
+                onChange={handleChange}
+                required
+                className="input"
+              />
+              <input
+                name="account_number"
+                placeholder="رقم الحساب"
+                onChange={handleChange}
+                required
+                className="input"
+              />
+              <button type="submit" className="btn w-full">
+                ✅ إصدار الشيك
+              </button>
+            </>
+          )}
+        </form>
+      )}
 
       {cheque && (
         <>
-          <div className="flex space-x-4 mb-4">
-            <button onClick={downloadCheque} className="bg-green-600 text-white px-4 py-2 rounded">
+          <div className="flex gap-4 mb-4">
+            <button
+              onClick={downloadCheque}
+              className="bg-green-600 text-white px-4 py-2 rounded"
+            >
               تحميل الشيك
             </button>
-            <button onClick={() => navigate(`/sign/${cheque.id}`)} className="bg-yellow-500 text-white px-4 py-2 rounded">
+            <button
+              onClick={() => navigate(`/sign/${cheque.id}`)}
+              className="bg-yellow-500 text-white px-4 py-2 rounded"
+            >
               توقيع الشيك
             </button>
           </div>
@@ -141,73 +185,49 @@ export default function CreateChequePage() {
               height: "412px",
               backgroundImage: 'url("/cheque-template.png")',
               backgroundSize: "cover",
-              backgroundRepeat: "no-repeat",
               position: "relative",
-              fontFamily: "monospace",
+              direction: "rtl",
+              fontFamily: "Tajawal, sans-serif",
             }}
           >
-            <div style={{ position: "absolute", top: "25px", left: "600px", fontWeight: "bold", fontSize: "16px" }}>
+            <div style={{ position: "absolute", top: "25px", left: "600px" }}>
               CHQ #: {cheque.id}
             </div>
-
-            <div style={{ position: "absolute", top: "85px", left: "70px", fontWeight: "bold", fontSize: "16px" }}>
+            <div style={{ position: "absolute", top: "85px", left: "70px" }}>
               {cheque.cheque_date}
             </div>
-
-            <div style={{ position: "absolute", top: "140px", left: "310px", fontWeight: "bold", fontSize: "18px" }}>
+            <div style={{ position: "absolute", top: "140px", left: "310px" }}>
               {cheque.receiver}
             </div>
-
-            <div style={{
-              position: "absolute",
-              top: "180px",
-              right: "295px",
-              fontSize: "16px",
-              fontWeight: "bold",
-              fontStyle: "italic",
-              direction: "rtl",
-              width: "450px",
-              textAlign: "right",
-              lineHeight: "33px",
-              fontFamily: "Tajawal, 'Amiri', 'Segoe UI', 'Helvetica Neue', sans-serif",
-            }}>
+            <div
+              style={{
+                position: "absolute",
+                top: "180px",
+                right: "300px",
+                fontSize: "16px",
+                width: "600px",
+                textAlign: "right",
+              }}
+            >
               فقط ({numberToArabicWords(cheque.amount)})
             </div>
-
-            <div style={{
-              position: "absolute",
-              top: "220px",
-              right: "690px",
-              fontSize: "14px",
-              fontWeight: "bold",
-              fontStyle: "italic",
-              direction: "rtl",
-              width: "700px",
-              textAlign: "right",
-            }}>
+            <div style={{ position: "absolute", top: "215px", right: "300px" }}>
               لا غير
             </div>
-
-            <div style={{ position: "absolute", top: "210px", left: "580px", fontSize: "18px", fontWeight: "bold" }}>
-              {formatNumberWithCommas(Math.floor(cheque.amount))}
+            <div style={{ position: "absolute", top: "210px", left: "630px" }}>
+              {Math.floor(cheque.amount).toLocaleString()}
             </div>
-
-            <div style={{ position: "absolute", top: "210px", left: "730px", fontSize: "18px", fontWeight: "bold" }}>
-              {(Math.round((cheque.amount - Math.floor(cheque.amount)) * 100)).toString().padStart(2, "0")}
+            <div style={{ position: "absolute", top: "210px", left: "725px" }}>
+              {(Math.round((cheque.amount - Math.floor(cheque.amount)) * 100))
+                .toString()
+                .padStart(2, "0")}
             </div>
-
-            <div style={{ position: "absolute", top: "265px", left: "50px", fontSize: "14px", fontWeight: "bold" }}>
-              {cheque.sender}
-            </div>
-
-            <div style={{ position: "absolute", bottom: "20px", left: "80px", fontSize: "18px", fontWeight: "bold" }}>
+            <div style={{ position: "absolute", bottom: "20px", left: "80px" }}>
               {cheque.id}
             </div>
-
-            <div style={{ position: "absolute", bottom: "20px", left: "300px", fontSize: "18px", fontWeight: "bold" }}>
+            <div style={{ position: "absolute", bottom: "20px", left: "300px" }}>
               {cheque.account_number}
             </div>
-
             <div style={{ position: "absolute", top: "270px", left: "640px" }}>
               <QRCodeCanvas value={JSON.stringify(cheque)} size={70} />
             </div>

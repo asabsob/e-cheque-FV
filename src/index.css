@@ -1,6 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 body {
-  fontFamily: "Tajawal, 'Amiri', 'Segoe UI', 'Helvetica Neue', sans-serif",
-direction: "rtl"
+  font-family: "Tajawal", "Amiri", "Segoe UI", "Helvetica Neue", sans-serif;
+  direction: rtl;
+}
+
+.input {
+  @apply w-full border border-gray-300 rounded p-2;
+}
+
+.btn {
+  @apply bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700;
+}
