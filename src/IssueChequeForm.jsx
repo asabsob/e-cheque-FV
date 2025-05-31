@@ -20,12 +20,15 @@ export default function IssueChequeForm({ onSuccess }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    if (name === "receiver_account" && value.trim().length > 0) {
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    if (name === "receiver_account" && value.trim().length >= 2) {
       setReceiverLocked(true);
     }
 
-    if (name === "amount" && value.trim().length > 0) {
+    if (name === "amount" && parseFloat(value) >= 0.01) {
       setAmountLocked(true);
     }
   };
@@ -71,20 +74,19 @@ export default function IssueChequeForm({ onSuccess }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 p-6 max-w-xl mx-auto bg-white shadow-lg rounded-lg border border-gray-100"
+      className="space-y-4 p-4 sm:p-6 max-w-xl mx-auto bg-white shadow-lg rounded-lg border border-gray-100"
     >
       <h2 className="text-2xl font-bold text-center mb-4 text-blue-700">
         🧾 إصدار شيك جديد
       </h2>
 
-      <div className="grid grid-cols-1 gap-3">
-        <label className="font-medium text-gray-700">رقم حساب المُصدر</label>
+      <div className="grid grid-cols-1 gap-4">
         <input
           name="sender_account"
           placeholder="رقم حساب المُصدر"
           onChange={handleChange}
           required
-          className="input"
+          className="input w-full"
         />
 
         {!receiverLocked && (
@@ -92,8 +94,9 @@ export default function IssueChequeForm({ onSuccess }) {
             name="receiver_account"
             placeholder="اسم المستفيد"
             onChange={handleChange}
+            onBlur={handleBlur}
             required
-            className="input"
+            className="input w-full"
           />
         )}
 
@@ -102,7 +105,7 @@ export default function IssueChequeForm({ onSuccess }) {
           placeholder="تأكيد اسم المستفيد"
           onChange={handleChange}
           required
-          className="input"
+          className="input w-full"
         />
 
         {!amountLocked && (
@@ -112,8 +115,9 @@ export default function IssueChequeForm({ onSuccess }) {
             name="amount"
             placeholder="المبلغ (دينار)"
             onChange={handleChange}
+            onBlur={handleBlur}
             required
-            className="input"
+            className="input w-full"
           />
         )}
 
@@ -124,7 +128,7 @@ export default function IssueChequeForm({ onSuccess }) {
           placeholder="تأكيد المبلغ"
           onChange={handleChange}
           required
-          className="input"
+          className="input w-full"
         />
 
         <label className="font-medium text-gray-700">تاريخ الشيك</label>
@@ -133,7 +137,7 @@ export default function IssueChequeForm({ onSuccess }) {
           name="cheque_date"
           onChange={handleChange}
           required
-          className="input"
+          className="input w-full"
         />
 
         <label className="font-medium text-gray-700">تاريخ الانتهاء</label>
@@ -142,7 +146,7 @@ export default function IssueChequeForm({ onSuccess }) {
           name="expiry_date"
           onChange={handleChange}
           required
-          className="input"
+          className="input w-full"
         />
       </div>
 

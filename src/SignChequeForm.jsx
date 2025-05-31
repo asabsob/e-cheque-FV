@@ -1,65 +1,56 @@
-import { useState } from "react";
+import { useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom"; // ✅ أضف useParams هنا
+import SignatureCanvas from "react-signature-canvas";
 
-export default function SignChequeForm({ chequeId }) {
-  const [otp, setOtp] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+export default function SignChequeForm() {
+  const { chequeId } = useParams(); // ✅ قراءة معرف الشيك من الرابط
+  const sigPad = useRef();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatusMessage("");
+  const clearSignature = () => {
+    sigPad.current.clear();
+  };
 
-    try {
-      const response = await fetch("https://echeque-api.vercel.app/echeques/sign", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x_api_key": "bank-abc-key", // Replace with real or environment-secured key
-        },
-        body: JSON.stringify({ cheque_id: chequeId, otp }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setStatusMessage(`✅ Cheque Signed Successfully. Status: ${result.status}`);
-      } else {
-        setStatusMessage(`❌ ${result.detail || "Failed to sign the cheque."}`);
-      }
-    } catch (error) {
-      setStatusMessage("❌ Network error. Please try again.");
-    } finally {
-      setLoading(false);
+  const saveSignature = () => {
+    if (sigPad.current.isEmpty()) {
+      alert("يرجى توقيع الشيك قبل الحفظ.");
+      return;
     }
+
+    const signatureData = sigPad.current.getCanvas().toDataURL("image/png");
+    localStorage.setItem(`signature-${chequeId}`, signatureData);
+    navigate(`/preview/${chequeId}`);
   };
 
   return (
-    <div className="max-w-md mx-auto mt-6 p-4 border rounded-xl shadow-sm bg-white">
-      <h2 className="text-xl font-semibold mb-4 text-center">Sign Cheque</h2>
-      <form onSubmit={handleSubmit}>
-        <label className="block mb-2 font-medium">OTP Code</label>
-        <input
-          type="text"
-          value={otp}
-          onChange={(e) => setOtp(e.target.value)}
-          className="w-full border border-gray-300 p-2 rounded mb-4"
-          placeholder="Enter the OTP"
-          required
-        />
+    <div className="bg-white p-6 rounded shadow max-w-xl mx-auto">
+      <p className="text-gray-700 mb-2 text-center">✍️ الرجاء توقيع الشيك في المساحة أدناه:</p>
+
+      <SignatureCanvas
+  ref={sigPad}
+  penColor="black"
+  canvasProps={{
+    width: 400,
+    height: 150,
+    className: "border-4 border-dashed border-gray-400 rounded-md w-full", // 🔲 Dashed frame
+  }}
+/>
+
+
+      <div className="flex justify-center gap-4 mt-4">
         <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
+          onClick={clearSignature}
+          className="bg-red-500 text-white px-4 py-2 rounded"
         >
-          {loading ? "Signing..." : "Sign Cheque"}
+          🧹 مسح
         </button>
-      </form>
-      {statusMessage && (
-        <p className="mt-4 text-center text-sm font-medium">
-          {statusMessage}
-        </p>
-      )}
+        <button
+          onClick={saveSignature}
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
+          ✅ حفظ التوقيع
+        </button>
+      </div>
     </div>
   );
 }
